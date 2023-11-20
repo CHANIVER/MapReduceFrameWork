@@ -38,8 +38,12 @@ public:
         int lineCount = 0;
         while (getline(file, line))
         {
-            split.push_back(line);
-            lineCount++;
+            if (!line.empty())
+            { // 레코드가 비어있지 않을 때만 split에 추가
+                split.push_back(line);
+                lineCount++;
+            }
+
             if (lineCount == splitSize)
             {
                 splits.push_back(join(split, "\n"));
@@ -47,6 +51,7 @@ public:
                 lineCount = 0;
             }
         }
+
         if (!split.empty())
         {
             splits.push_back(join(split, "\n"));
@@ -72,3 +77,17 @@ public:
         return splits;
     }
 };
+
+int main()
+{
+    RecordReader reader("input/test.txt", 2);
+    vector<string> splits = reader.getSplits();
+
+    for (int i = 0; i < splits.size(); i++)
+    {
+        cout << "Split " << i + 1 << ":\n"
+             << splits[i] << endl;
+    }
+
+    return 0;
+}
