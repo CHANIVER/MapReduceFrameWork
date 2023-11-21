@@ -1,93 +1,62 @@
-#include <iostream>
-
-using namespace std;
-
-#include <fstream>
-#include <vector>
-#include <string>
+#include "RecordReader.h"
 #include <iostream>
 #include <cstdlib>
 
-using namespace std;
-
-class RecordReader
+RecordReader::RecordReader(const std::string &filename, int splitSize) : file(filename), splitSize(splitSize)
 {
-private:
-    ifstream file;
-    vector<string> splits;
-    int splitSize;
-
-public:
-    RecordReader(const string &filename, int splitSize) : file(filename), splitSize(splitSize)
+    if (!file.is_open())
     {
-        if (!file.is_open())
-        {
-            cerr << "파일을 열지 못했습니다: " << filename << endl;
-            exit(1);
-        }
-        else
-        {
-            readSplits();
-        }
+        std::cerr << "파일을 열지 못했습니다: " << filename << std::endl;
+        exit(1);
     }
-
-    void readSplits()
+    else
     {
-        string line;
-        vector<string> split;
-        int lineCount = 0;
-        while (getline(file, line))
-        {
-            if (!line.empty())
-            { // 레코드가 비어있지 않을 때만 split에 추가
-                split.push_back(line);
-                lineCount++;
-            }
+        readSplits();
+    }
+}
 
-            if (lineCount == splitSize)
-            {
-                splits.push_back(join(split, "\n"));
-                split.clear();
-                lineCount = 0;
-            }
+void RecordReader::readSplits()
+{
+    std::string line;
+    std::vector<std::string> split;
+    int lineCount = 0;
+    while (getline(file, line))
+    {
+        if (!line.empty())
+        {
+            split.push_back(line);
+            lineCount++;
         }
 
-        if (!split.empty())
+        if (lineCount == splitSize)
         {
             splits.push_back(join(split, "\n"));
+            split.clear();
+            lineCount = 0;
         }
     }
 
-    string join(const vector<string> &vec, const string &delimiter)
+    if (!split.empty())
     {
-        string result;
-        for (const auto &str : vec)
-        {
-            if (!result.empty())
-            {
-                result += delimiter;
-            }
-            result += str;
-        }
-        return result;
+        splits.push_back(join(split, "\n"));
     }
+}
 
-    vector<string> getSplits() const
-    {
-        return splits;
-    }
-};
-
-int main()
+std::string RecordReader::join(const std::vector<std::string> &vec, const std::string &delimiter)
 {
-    RecordReader reader("input/test.txt", 2);
-    vector<string> splits = reader.getSplits();
-
-    for (int i = 0; i < splits.size(); i++)
+    std::string result;
+    for (const auto &str : vec)
     {
-        cout << "Split " << i + 1 << ":\n"
-             << splits[i] << endl;
+        if (!result.empty())
+        {
+            result += delimiter;
+        }
+        result += str;
     }
+    return result;
+}
 
-    return 0;
+std::vector<std::string> RecordReader::getSplits() const
+{
+    return splits;
 }
