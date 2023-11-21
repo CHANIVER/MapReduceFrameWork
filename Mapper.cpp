@@ -1,4 +1,4 @@
-#include "mapper.h"
+#include "Mapper.h"
 
 void Mapper::map(vector<string>& keys, vector<vector<int>>& values, const vector<string>& records) {
     unordered_map<string, vector<int>> wordCount;
