@@ -6,24 +6,49 @@
 #include "RecordReader.cpp"
 using namespace std;
 
-template <typename U, typename W>
-void readBinaryFile(const string &filename)
+namespace myutil
 {
-    ifstream inFile(filename, ios::binary);
-    U key;
-    W value;
-    if (inFile.is_open())
+    template <typename U, typename W>
+    void readBinaryFile(const string &filename)
     {
-        while (inFile.read(reinterpret_cast<char *>(&key), sizeof(key)))
+        ifstream inFile(filename, ios::binary);
+        U key;
+        W value;
+        if (inFile.is_open())
         {
-            inFile.read(reinterpret_cast<char *>(&value), sizeof(value));
-            cout << "Key: " << key << ", Value: " << value << endl;
+            while (inFile.read(reinterpret_cast<char *>(&key), sizeof(key)))
+            {
+                inFile.read(reinterpret_cast<char *>(&value), sizeof(value));
+                cout << "Key: " << key << ", Value: " << value << endl;
+            }
+            inFile.close();
         }
-        inFile.close();
+        else
+        {
+            cout << "Failed to open file: " << filename << endl;
+        }
     }
-    else
+
+    vector<string> split(const string &s, string delimiters)
     {
-        cout << "Failed to open file: " << filename << endl;
+        vector<string> tokens;
+        string str = s;
+
+        for (char delimiter : delimiters)
+        {
+            replace(str.begin(), str.end(), delimiter, ' '); // replace를 통해 범위 내 특정 값(delimiter)를 ' '로 변경
+        }
+
+        stringstream ss(str);
+        string temp;
+
+        // 스트림 추출 연산자 >> 사용하여 공백 구분자로 문자열 분리
+        while (ss >> temp)
+        {
+            tokens.push_back(temp);
+        }
+
+        return tokens;
     }
 }
 
@@ -35,9 +60,9 @@ public:
 
     void map(const K &key, const V &value) override
     {
-        istringstream iss(value);
-        string word;
-        while (iss >> word)
+        vector<string> words = myutil::split(value, "./ #^%$!@(_):?!,'");
+
+        for (const auto &word : words)
         {
             this->pair.setKey(word);
             this->pair.setValue(1);
@@ -48,7 +73,7 @@ public:
 
 int main()
 {
-    RecordReader reader("input/test.txt", 2);
+    RecordReader reader("input/short.txt", 2);
     reader.readSplits();
     vector<string> Splits = reader.getSplits();
 
@@ -57,7 +82,7 @@ int main()
     {
         wc.map("", split);
     }
-    readBinaryFile<string, int>("mapout/tmp");
+    myutil::readBinaryFile<string, int>("mapout/tmp");
     cout << "DatabaseSystem Team Project";
     return 0;
 }
