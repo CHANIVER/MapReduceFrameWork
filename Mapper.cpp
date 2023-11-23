@@ -14,13 +14,13 @@ class Pair
 {
 private:
     const string filename = "mapout/tmp";
-    const U key;
-    const W value;
+    U key;
+    W value;
 
 public:
     void write()
     {
-        ofstream outFile(filename, ios::binary);
+        ofstream outFile(filename, ios::app);
 
         if (outFile.is_open())
         {
@@ -32,8 +32,8 @@ public:
 
     U getKey() { return key; }
     W getValue() { return value; }
-    U setKey(U key) { this->key = key; }
-    W setValue(W value) { this->value = value; }
+    void setKey(U key) { this->key = key; }
+    void setValue(W value) { this->value = value; }
 };
 
 /**
@@ -50,7 +50,7 @@ protected:
     Pair<U, W> pair;
 
 public:
-    Mapper(vector<V> splits) : splits(splits) {}
+    Mapper(vector<V> splits) : splits(splits), pair(Pair<U, W>()) {}
 
     /**
      * map 함수
