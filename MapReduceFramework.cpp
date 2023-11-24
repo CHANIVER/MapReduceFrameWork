@@ -31,6 +31,46 @@ namespace myutil
         }
     }
 
+#include <filesystem>
+#include <fstream>
+#include <iostream>
+#include <vector>
+
+    template <typename W>
+    void readBinaryMap(const std::string &dirPath)
+    {
+        for (const auto &entry : std::filesystem::directory_iterator(dirPath))
+        {
+            std::string filePath = entry.path().string();
+            std::string key = entry.path().filename().string();
+
+            std::ifstream inFile(filePath, std::ios::binary);
+            std::vector<W> values;
+            W value;
+
+            if (inFile.is_open())
+            {
+                while (inFile.read(reinterpret_cast<char *>(&value), sizeof(W)))
+                {
+                    values.push_back(value);
+                }
+
+                std::cout << "Key: " << key << ", Values: ";
+                for (const auto &val : values)
+                {
+                    std::cout << val << " ";
+                }
+                std::cout << std::endl;
+
+                inFile.close();
+            }
+            else
+            {
+                std::cout << "Failed to open file: " << filePath << std::endl;
+            }
+        }
+    }
+
     vector<string> split(const string &s, string delimiters)
     {
         vector<string> tokens;
@@ -101,6 +141,7 @@ int main()
     // // myutil::readBinaryFile<string, int>("mapout/tmp");
 
     // myutil::readBinaryFile<string, int>("mapout/tmp");
+    myutil::readBinaryMap<int>("./partition");
 
     std::cout << "DatabaseSystem Team Project";
     return 0;
