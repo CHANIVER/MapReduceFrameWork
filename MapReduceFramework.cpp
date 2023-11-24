@@ -73,16 +73,25 @@ public:
 
 int main()
 {
+
     RecordReader reader("input/short.txt", 2);
     reader.readSplits();
     vector<string> Splits = reader.getSplits();
 
     WordCount<string, string, string, int> wc(Splits);
+    int count = 0;
     for (const auto &split : Splits)
     {
+        wc.setOutputPath("mapout/" + to_string(count++));
         wc.map("", split);
     }
-    myutil::readBinaryFile<string, int>("mapout/tmp");
+
+    // test
+    while (count > 0)
+    {
+        myutil::readBinaryFile<string, int>("mapout/" + to_string(--count));
+    }
+    // myutil::readBinaryFile<string, int>("mapout/tmp");
     cout << "DatabaseSystem Team Project";
     return 0;
 }

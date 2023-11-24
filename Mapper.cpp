@@ -13,7 +13,7 @@ template <typename U, typename W>
 class Pair
 {
 private:
-    const string filename = "mapout/tmp";
+    string filename = "/tmp";
     U key;
     W value;
 
@@ -34,6 +34,7 @@ public:
     W getValue() { return value; }
     void setKey(U key) { this->key = key; }
     void setValue(W value) { this->value = value; }
+    void setOutputPath(string filename) { this->filename = filename; }
 };
 
 /**
@@ -57,6 +58,7 @@ public:
      *
      */
     virtual void map(const K &key, const V &value) = 0;
+    void setOutputPath(string outfilename) { this->pair.setOutputPath(outfilename); }
 };
 /*
 write를 하면 파일에다가 이진 파일로 저장하게끔하고
