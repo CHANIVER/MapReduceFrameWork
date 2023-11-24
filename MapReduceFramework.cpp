@@ -4,12 +4,14 @@
 #include <sstream>
 #include "Mapper.cpp"
 #include "RecordReader.cpp"
+#include "Partitioner.cpp"
+
 using namespace std;
 
 namespace myutil
 {
     template <typename U, typename W>
-    void readBinaryFile(const string &filename)
+    void readBinaryPair(const string &filename)
     {
         ifstream inFile(filename, ios::binary);
         U key;
@@ -85,13 +87,21 @@ int main()
         wc.setOutputPath("mapout/" + to_string(count++));
         wc.map("", split);
     }
+    count--;
 
-    // test
-    while (count > 0)
-    {
-        myutil::readBinaryFile<string, int>("mapout/" + to_string(--count));
-    }
+    Partitioner<string, int> partitioner;
+    partitioner.read(count);
+    partitioner.write();
+
+    // // mapper test
+    // while (count > 0)
+    // {
+    //     myutil::readBinaryFile<string, int>("mapout/" + to_string(count--));
+    // }
+    // // myutil::readBinaryFile<string, int>("mapout/tmp");
+
     // myutil::readBinaryFile<string, int>("mapout/tmp");
-    cout << "DatabaseSystem Team Project";
+
+    std::cout << "DatabaseSystem Team Project";
     return 0;
 }
