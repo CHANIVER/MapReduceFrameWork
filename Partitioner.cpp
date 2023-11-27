@@ -39,7 +39,7 @@ public:
     {
         for (auto it = partitionMap.begin(); it != partitionMap.end(); ++it)
         {
-            std::string filename = outputPath + "/" + it->first;
+            std::string filename = outputPath + it->first;
             std::ofstream outFile(filename, std::ios::binary);
 
             if (outFile.is_open())
