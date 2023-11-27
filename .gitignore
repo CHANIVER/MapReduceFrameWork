@@ -3,3 +3,4 @@ Mapper
 RecordReader
 MapReduceFramework
 mapout/tmp
+ExternalSort
