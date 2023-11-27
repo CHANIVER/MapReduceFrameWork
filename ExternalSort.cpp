@@ -48,26 +48,42 @@ public:
         merge();
     }
 
-    // print sortedFiles
+    vector<string> getSortedFiles() const
+    {
+        return sortedFiles;
+    }
+
+    // merged.bin 파일을 읽어 키를 출력하는 함수
     void print()
     {
-        for (const auto &filename : sortedFiles)
+        ifstream inFile(dirPath + "/merged_result", ios::binary);
+
+        if (inFile.is_open())
         {
-            cout << filename << endl;
+            K key;
+            while (inFile.read(reinterpret_cast<char *>(&key), sizeof(K)))
+            {
+                cout << key << endl;
+            }
+            inFile.close();
+        }
+        else
+        {
+            cout << "Failed to open file: " << dirPath + "/merged_result" << endl;
         }
     }
 
 private:
     void flush()
     {
-        string filename = dirPath + "sorted_" + to_string(sortedFiles.size()) + ".txt";
+        string filename = dirPath + "/sorted_" + to_string(sortedFiles.size());
         sortedFiles.push_back(filename);
 
-        ofstream outFile(filename, ios::out);
+        ofstream outFile(filename, ios::binary);
 
         for (const auto &key : buffer)
         {
-            outFile << key << endl;
+            outFile.write(reinterpret_cast<const char *>(&key), sizeof(K));
         }
 
         outFile.close();
@@ -89,15 +105,15 @@ private:
         // 각 파일을 열고, 첫 번째 키를 minHeap에 추가
         for (size_t i = 0; i < sortedFiles.size(); ++i)
         {
-            inFiles[i].open(sortedFiles[i], ios::in);
+            inFiles[i].open(sortedFiles[i], ios::binary);
             K key;
-            if (inFiles[i] >> key)
+            if (inFiles[i].read(reinterpret_cast<char *>(&key), sizeof(K)))
             {
                 minHeap.push(make_pair(key, &inFiles[i]));
             }
         }
 
-        ofstream outFile(dirPath + "/merged.txt", ios::out);
+        ofstream outFile(dirPath + "/merged_result", ios::binary);
 
         while (!minHeap.empty())
         {
@@ -105,10 +121,10 @@ private:
             auto [key, inFile] = minHeap.top();
             minHeap.pop();
 
-            outFile << key << endl;
+            outFile.write(reinterpret_cast<const char *>(&key), sizeof(K));
 
             // 해당 파일에서 다음 키를 읽어 minHeap에 추가한다.
-            if (*inFile >> key)
+            if (inFile->read(reinterpret_cast<char *>(&key), sizeof(K)))
             {
                 minHeap.push(make_pair(key, inFile));
             }
