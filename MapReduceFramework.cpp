@@ -2,14 +2,35 @@
 #include <string>
 #include <vector>
 #include <sstream>
+#include <filesystem>
+#include <fstream>
+
 #include "Mapper.cpp"
 #include "RecordReader.cpp"
 #include "Partitioner.cpp"
+#include "ExternalSort.cpp"
+#include <thread>
+
+#define MAPKEY_IN string
+#define MAPVALUE_IN string
+#define MAPKEY_OUT string
+#define MAPVALUE_OUT int
+#define REDUCEKEY_IN MAPKEY_OUT
+#define REDUCEVALUE_IN MAPVALUE_OUT
 
 using namespace std;
 
 namespace myutil
 {
+    // 편의를 위해 이전 결과 파일들을 제거하는 함수
+    void removeFiles(const string &dirPath)
+    {
+        for (const auto &entry : std::filesystem::directory_iterator(dirPath))
+        {
+            std::filesystem::remove(entry.path());
+        }
+    }
+
     template <typename U, typename W>
     void readBinaryPair(const string &filename)
     {
@@ -30,11 +51,6 @@ namespace myutil
             cout << "Failed to open file: " << filename << endl;
         }
     }
-
-#include <filesystem>
-#include <fstream>
-#include <iostream>
-#include <vector>
 
     template <typename W>
     void readBinaryMap(const std::string &dirPath)
@@ -115,33 +131,48 @@ public:
 
 int main()
 {
+    myutil::removeFiles("mapout");
+    myutil::removeFiles("partition");
+    myutil::removeFiles("sorted");
+
+    // wait 2 seconds
+    std::this_thread::sleep_for(std::chrono::seconds(2));
 
     RecordReader reader("input/short.txt", 2);
     reader.readSplits();
     vector<string> Splits = reader.getSplits();
 
-    WordCount<string, string, string, int> wc(Splits);
+    // map
+    WordCount<MAPKEY_IN, MAPVALUE_IN, MAPKEY_OUT, MAPVALUE_OUT> wc(Splits);
     int count = 0;
     for (const auto &split : Splits)
     {
         wc.setOutputPath("mapout/" + to_string(count++));
         wc.map("", split);
+        wc.flush();
     }
     count--;
 
-    Partitioner<string, int> partitioner;
+    // partition
+    Partitioner<MAPKEY_OUT, MAPVALUE_OUT> partitioner;
     partitioner.read(count);
     partitioner.write();
 
-    // // mapper test
-    // while (count > 0)
-    // {
-    //     myutil::readBinaryFile<string, int>("mapout/" + to_string(count--));
-    // }
-    // // myutil::readBinaryFile<string, int>("mapout/tmp");
+    // output all mapper files
+    while (count >= 0)
+    {
+        myutil::readBinaryPair<MAPKEY_OUT, MAPVALUE_OUT>("mapout/" + to_string(count--));
+    }
 
-    // myutil::readBinaryFile<string, int>("mapout/tmp");
-    myutil::readBinaryMap<int>("./partition");
+    cout << "partition 입니다." << '\n';
+    myutil::readBinaryMap<MAPVALUE_OUT>("./partition");
+
+    // external sort
+    Sorter<REDUCEKEY_IN> sorter("./partition");
+    sorter.sort();
+    cout << "sorted 입니다." << '\n';
+    sorter.print();
+    // myutil::readBinaryMap<int>("./sorted");
 
     std::cout << "DatabaseSystem Team Project";
     return 0;
