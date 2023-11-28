@@ -1,3 +1,4 @@
+#pragma once
 #include <iostream>
 #include <string>
 #include <vector>
@@ -13,14 +14,16 @@ template <typename KeyType, typename ValueType>
 class Pair
 {
 private:
-    static const int BUFFER_SIZE = 10000;          // 버퍼 크기 설정
-    static map<KeyType, vector<ValueType>> buffer; // 버퍼 (키-값 쌍을 저장)
-    static int totalPairCount;                     // 전체 키-값 쌍의 개수
+    static const int BUFFER_SIZE = 10000;   // 버퍼 크기 설정
+    map<KeyType, vector<ValueType>> buffer; // non-static 멤버로 변경
+    int totalPairCount = 0;                 // non-static 멤버로 변경
     string filename = "/tmp";
     KeyType key;
     ValueType value;
 
 public:
+    ~Pair() { flush(); } // 소멸자에서 flush 호출
+
     void write()
     {
         // 버퍼에 추가
@@ -70,9 +73,3 @@ public:
     void setValue(ValueType value) { this->value = value; }
     void setOutputPath(string filename) { this->filename = filename; }
 };
-
-// 템플릿 클래스의 정적 데이터 멤버 초기화
-template <typename KeyType, typename ValueType>
-map<KeyType, vector<ValueType>> Pair<KeyType, ValueType>::buffer;
-template <typename KeyType, typename ValueType>
-int Pair<KeyType, ValueType>::totalPairCount = 0;

@@ -10,6 +10,7 @@
 #include "RecordReader.cpp"
 #include "Partitioner.cpp"
 #include "ExternalSort.cpp"
+#include "Reducer.cpp"
 
 #define MAPKEY_IN string
 #define MAPVALUE_IN string
@@ -113,10 +114,10 @@ namespace myutil
 }
 
 template <typename K, typename V, typename U, typename W>
-class WordCount : public Mapper<K, V, U, W>
+class WordCountMapper : public Mapper<K, V, U, W>
 {
 public:
-    WordCount(vector<V> splits) : Mapper<K, V, U, W>(splits) {}
+    WordCountMapper(vector<V> splits) : Mapper<K, V, U, W>(splits) {}
 
     void map(const K &key, const V &value) override
     {
@@ -128,6 +129,26 @@ public:
             this->pair.setValue(1);
             this->pair.write();
         }
+        this->flush(); // map 함수가 끝나면 flush 호출
+    }
+};
+
+template <typename K, typename V, typename U, typename W>
+class WordCountReducer : public Reducer<K, V, U, W>
+{
+public:
+    WordCountReducer(vector<K> keylist) : Reducer<K, V, U, W>(keylist) {}
+
+    void reduce(const K &key, const vector<V> &value) override
+    {
+        int sum = 0;
+        for (const auto &val : value)
+        {
+            sum += val;
+        }
+        this->pair.setKey(key);
+        this->pair.setValue(sum);
+        this->pair.write();
     }
 };
 
@@ -137,16 +158,17 @@ int main()
     myutil::removeFiles("mapout");
     myutil::removeFiles("partition");
     myutil::removeFiles("sorted");
+    myutil::removeFiles("reduceout");
 
     // wait 2 seconds
-    std::this_thread::sleep_for(std::chrono::seconds(20));
+    // std::this_thread::sleep_for(std::chrono::seconds(20));
 
-    RecordReader reader("input/english_text_file.txt", 500000);
+    RecordReader reader("input/test.txt", 50);
     reader.readSplits();
     vector<string> Splits = reader.getSplits();
 
     // map
-    WordCount<MAPKEY_IN, MAPVALUE_IN, MAPKEY_OUT, MAPVALUE_OUT> wc(Splits);
+    WordCountMapper<MAPKEY_IN, MAPVALUE_IN, MAPKEY_OUT, MAPVALUE_OUT> wc(Splits);
     int count = 0;
     for (const auto &split : Splits)
     {
@@ -176,6 +198,32 @@ int main()
     sorter.sort();
     cout << "sorted 입니다." << '\n';
     sorter.print();
+
+    // reduce
+    WordCountReducer<REDUCEKEY_IN, REDUCEVALUE_IN, REDUCEKEY_OUT, REDUCEVALUE_OUT> reducer(sorter.getKeys());
+    // getkeylist
+    vector<REDUCEKEY_IN> keylist = reducer.getKeylist();
+    while (!keylist.empty())
+    {
+        REDUCEKEY_IN key = keylist.back();
+        cout << "key:" << key << '\n';
+        // open file that have same name with key
+        ifstream inFile("partition/" + key, ios::binary);
+        vector<REDUCEVALUE_IN> values;
+        while (!inFile.eof())
+        {
+            REDUCEVALUE_IN value;
+            inFile.read(reinterpret_cast<char *>(&value), sizeof(value));
+            values.push_back(value);
+        }
+        reducer.setOutputPath("reduceout/result");
+        reducer.reduce(key, values);
+        reducer.flush();
+        keylist.pop_back();
+    }
+
+    // output reduceout file
+    myutil::readBinaryPair<REDUCEKEY_OUT, REDUCEVALUE_OUT>("reduceout/result");
 
     std::cout << "DatabaseSystem Team Project";
     return 0;

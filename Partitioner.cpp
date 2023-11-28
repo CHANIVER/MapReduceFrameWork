@@ -15,7 +15,7 @@ private:
 public:
     void read(int count)
     {
-        for (int i = 0; i < count; i++)
+        for (int i = 0; i <= count; i++)
         {
             string filename = inputPath + to_string(i);
             ifstream inFile(filename, ios::binary);

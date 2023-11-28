@@ -48,11 +48,6 @@ public:
         merge();
     }
 
-    vector<string> getSortedFiles() const
-    {
-        return sortedFiles;
-    }
-
     // merged.bin 파일을 읽어 키를 출력하는 함수
     void print()
     {
@@ -71,6 +66,29 @@ public:
         {
             cout << "Failed to open file: " << dirPath + "/merged_result" << endl;
         }
+    }
+
+    // merged_result 파일을 읽어 키를 반환하는 함수
+    vector<K> getKeys()
+    {
+        ifstream inFile(dirPath + "/merged_result", ios::binary);
+        vector<K> keys;
+
+        if (inFile.is_open())
+        {
+            K key;
+            while (inFile.read(reinterpret_cast<char *>(&key), sizeof(K)))
+            {
+                keys.push_back(key);
+            }
+            inFile.close();
+        }
+        else
+        {
+            cout << "Failed to open file: " << dirPath + "/merged_result" << endl;
+        }
+
+        return keys;
     }
 
 private:
