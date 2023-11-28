@@ -10,16 +10,16 @@
 
 using namespace std;
 
-template <typename U, typename W>
+template <typename KeyType, typename ValueType>
 class Pair
 {
 private:
-    static const int BUFFER_SIZE = 10; // 버퍼 크기 설정
-    static map<U, vector<W>> buffer;   // 버퍼 (키-값 쌍을 저장)
-    static int totalPairCount;         // 전체 키-값 쌍의 개수
+    static const int BUFFER_SIZE = 10;             // 버퍼 크기 설정
+    static map<KeyType, vector<ValueType>> buffer; // 버퍼 (키-값 쌍을 저장)
+    static int totalPairCount;                     // 전체 키-값 쌍의 개수
     string filename = "/tmp";
-    U key;
-    W value;
+    KeyType key;
+    ValueType value;
 
 public:
     void write()
@@ -44,8 +44,8 @@ public:
         {
             for (auto &pair : buffer)
             {
-                U key = pair.first;
-                vector<W> &values = pair.second;
+                KeyType key = pair.first;
+                vector<ValueType> &values = pair.second;
 
                 for (auto &value : values)
                 {
@@ -61,36 +61,37 @@ public:
         }
     }
 
-    U getKey() { return key; }
-    W getValue() { return value; }
-    void setKey(U key) { this->key = key; }
-    void setValue(W value) { this->value = value; }
+    KeyType getKey() { return key; }
+    ValueType getValue() { return value; }
+    void setKey(KeyType key) { this->key = key; }
+    void setValue(ValueType value) { this->value = value; }
     void setOutputPath(string filename) { this->filename = filename; }
 };
 
 // 템플릿 클래스의 정적 데이터 멤버 초기화
-template <typename U, typename W>
-map<U, vector<W>> Pair<U, W>::buffer;
-template <typename U, typename W>
-int Pair<U, W>::totalPairCount = 0;
+template <typename KeyType, typename ValueType>
+map<KeyType, vector<ValueType>> Pair<KeyType, ValueType>::buffer;
+template <typename KeyType, typename ValueType>
+int Pair<KeyType, ValueType>::totalPairCount = 0;
 
 /**
  * Mapper 클래스
  * Mapper 클래스는 map 함수를 가지고 있으며, map 함수를 통해 key, value를 받아서 Pair에 저장하고 write
- * input 형식 -> K, V
- * output 형식 -> U, W
+ * input 형식 -> InKeyType, InValueType
+ * output 형식 -> OutKeyType, OutValueType
  * 생성자 인자 splits
  */
-template <typename K, typename V, typename U, typename W>
+
+template <typename InKeyType, typename InValueType, typename OutKeyType, typename OutValueType>
 class Mapper
 {
 
 protected:
-    vector<V> splits;
-    Pair<U, W> pair;
+    vector<InValueType> splits;
+    Pair<OutKeyType, OutValueType> pair;
 
 public:
-    Mapper(vector<V> splits) : splits(splits), pair(Pair<U, W>()) {}
+    Mapper(vector<InValueType> splits) : splits(splits), pair(Pair<OutKeyType, OutValueType>()) {}
 
     /**
      * map 함수
@@ -101,10 +102,11 @@ public:
      * @return void
      * @see Pair
      */
-    virtual void map(const K &key, const V &value) = 0;
+    virtual void map(const InKeyType &key, const InValueType &value) = 0;
     void flush() { this->pair.flush(); }
     void setOutputPath(string outfilename) { this->pair.setOutputPath(outfilename); }
 };
+
 /*
 write를 하면 파일에다가 이진 파일로 저장하게끔하고
 나중에 읽어들이면서 key별로 정렬 및 sort하면 되지 않을까.

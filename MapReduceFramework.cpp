@@ -4,12 +4,12 @@
 #include <sstream>
 #include <filesystem>
 #include <fstream>
+#include <thread>
 
 #include "Mapper.cpp"
 #include "RecordReader.cpp"
 #include "Partitioner.cpp"
 #include "ExternalSort.cpp"
-#include <thread>
 
 #define MAPKEY_IN string
 #define MAPVALUE_IN string
@@ -17,6 +17,8 @@
 #define MAPVALUE_OUT int
 #define REDUCEKEY_IN MAPKEY_OUT
 #define REDUCEVALUE_IN MAPVALUE_OUT
+#define REDUCEKEY_OUT string
+#define REDUCEVALUE_OUT int
 
 using namespace std;
 
@@ -131,6 +133,7 @@ public:
 
 int main()
 {
+    // clean up all files in mapout, partition, sorted
     myutil::removeFiles("mapout");
     myutil::removeFiles("partition");
     myutil::removeFiles("sorted");
@@ -167,12 +170,11 @@ int main()
     cout << "partition 입니다." << '\n';
     myutil::readBinaryMap<MAPVALUE_OUT>("./partition");
 
-    // external sort
+    // sort(external)
     Sorter<REDUCEKEY_IN> sorter("./partition");
     sorter.sort();
     cout << "sorted 입니다." << '\n';
     sorter.print();
-    // myutil::readBinaryMap<int>("./sorted");
 
     std::cout << "DatabaseSystem Team Project";
     return 0;
