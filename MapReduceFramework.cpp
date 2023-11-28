@@ -139,9 +139,9 @@ int main()
     myutil::removeFiles("sorted");
 
     // wait 2 seconds
-    std::this_thread::sleep_for(std::chrono::seconds(2));
+    std::this_thread::sleep_for(std::chrono::seconds(20));
 
-    RecordReader reader("input/short.txt", 2);
+    RecordReader reader("input/english_text_file.txt", 500000);
     reader.readSplits();
     vector<string> Splits = reader.getSplits();
 
@@ -150,6 +150,7 @@ int main()
     int count = 0;
     for (const auto &split : Splits)
     {
+        cout << count << '\n';
         wc.setOutputPath("mapout/" + to_string(count++));
         wc.map("", split);
         wc.flush();

@@ -13,7 +13,7 @@ template <typename KeyType, typename ValueType>
 class Pair
 {
 private:
-    static const int BUFFER_SIZE = 10;             // 버퍼 크기 설정
+    static const int BUFFER_SIZE = 10000;          // 버퍼 크기 설정
     static map<KeyType, vector<ValueType>> buffer; // 버퍼 (키-값 쌍을 저장)
     static int totalPairCount;                     // 전체 키-값 쌍의 개수
     string filename = "/tmp";
@@ -24,6 +24,10 @@ public:
     void write()
     {
         // 버퍼에 추가
+        if (buffer.find(key) == buffer.end())
+        {
+            buffer[key] = vector<ValueType>();
+        }
         buffer[key].push_back(value);
         totalPairCount++;
 

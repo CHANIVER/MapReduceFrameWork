@@ -14,10 +14,10 @@ template <typename K>
 class Sorter
 {
 private:
-    static const int BLOCK_SIZE = 10; // Block size 설정
-    multiset<K> buffer;               // 버퍼 (키를 저장)
-    string dirPath;                   // Partition 디렉토리 경로
-    vector<string> sortedFiles;       // 정렬된 파일들의 이름을 저장할 vector
+    static const int BLOCK_SIZE = 10000; // Block size 설정
+    multiset<K> buffer;                  // 버퍼 (키를 저장)
+    string dirPath;                      // Partition 디렉토리 경로
+    vector<string> sortedFiles;          // 정렬된 파일들의 이름을 저장할 vector
 
 public:
     Sorter(const string &dirPath) : dirPath(dirPath) {}
