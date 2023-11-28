@@ -28,7 +28,7 @@ protected:
     Pair<OutKeyType, OutValueType> pair;
 
 public:
-    Reducer(vector<InKeyType> keylist) : keylist(keylist) {}
+    Reducer(vector<InKeyType> keylist, int bufferSize) : keylist(keylist), pair(Pair<OutKeyType, OutValueType>(bufferSize)) {}
 
     /**
      * reduce 함수

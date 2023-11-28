@@ -14,13 +14,13 @@ template <typename K>
 class Sorter
 {
 private:
-    static const int BLOCK_SIZE = 10000; // Block size 설정
-    multiset<K> buffer;                  // 버퍼 (키를 저장)
-    string dirPath;                      // Partition 디렉토리 경로
-    vector<string> sortedFiles;          // 정렬된 파일들의 이름을 저장할 vector
+    const int BLOCK_SIZE;       // Block size 설정
+    multiset<K> buffer;         // 버퍼 (키를 저장)
+    string dirPath;             // Partition 디렉토리 경로
+    vector<string> sortedFiles; // 정렬된 파일들의 이름을 저장할 vector
 
 public:
-    Sorter(const string &dirPath) : dirPath(dirPath) {}
+    Sorter(const string &dirPath, int blockSize) : dirPath(dirPath), BLOCK_SIZE(blockSize) {}
 
     void sort()
     {
@@ -82,6 +82,9 @@ public:
                 keys.push_back(key);
             }
             inFile.close();
+
+            // Sort the keys in reverse order
+            std::sort(keys.rbegin(), keys.rend());
         }
         else
         {

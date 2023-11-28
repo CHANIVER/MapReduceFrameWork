@@ -14,7 +14,7 @@ template <typename KeyType, typename ValueType>
 class Pair
 {
 private:
-    static const int BUFFER_SIZE = 10000;   // 버퍼 크기 설정
+    const int BUFFER_SIZE;                  // 버퍼 크기 설정
     map<KeyType, vector<ValueType>> buffer; // non-static 멤버로 변경
     int totalPairCount = 0;                 // non-static 멤버로 변경
     string filename = "/tmp";
@@ -22,6 +22,8 @@ private:
     ValueType value;
 
 public:
+    Pair(int bufferSize) : BUFFER_SIZE(bufferSize) {} // 버퍼 크기를 설정하는 생성자
+
     ~Pair() { flush(); } // 소멸자에서 flush 호출
 
     void write()

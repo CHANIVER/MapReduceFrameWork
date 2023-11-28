@@ -18,17 +18,15 @@ using namespace std;
  * output 형식 -> OutKeyType, OutValueType
  * 생성자 인자 splits
  */
-
 template <typename InKeyType, typename InValueType, typename OutKeyType, typename OutValueType>
 class Mapper
 {
-
 protected:
     vector<InValueType> splits;
     Pair<OutKeyType, OutValueType> pair;
 
 public:
-    Mapper(vector<InValueType> splits) : splits(splits), pair(Pair<OutKeyType, OutValueType>()) {}
+    Mapper(vector<InValueType> splits, int bufferSize) : splits(splits), pair(Pair<OutKeyType, OutValueType>(bufferSize)) {}
 
     /**
      * map 함수

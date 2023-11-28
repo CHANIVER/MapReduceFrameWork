@@ -117,7 +117,7 @@ template <typename K, typename V, typename U, typename W>
 class WordCountMapper : public Mapper<K, V, U, W>
 {
 public:
-    WordCountMapper(vector<V> splits) : Mapper<K, V, U, W>(splits) {}
+    WordCountMapper(vector<V> splits, int blockSize) : Mapper<K, V, U, W>(splits, blockSize) {}
 
     void map(const K &key, const V &value) override
     {
@@ -137,7 +137,7 @@ template <typename K, typename V, typename U, typename W>
 class WordCountReducer : public Reducer<K, V, U, W>
 {
 public:
-    WordCountReducer(vector<K> keylist) : Reducer<K, V, U, W>(keylist) {}
+    WordCountReducer(vector<K> keylist, int blockSize) : Reducer<K, V, U, W>(keylist, blockSize) {}
 
     void reduce(const K &key, const vector<V> &value) override
     {
@@ -152,8 +152,17 @@ public:
     }
 };
 
-int main()
+int main(int argc, char *argv[])
 {
+    if (argc < 4)
+    {
+        cout << "Usage: " << argv[0] << "<inputfile> <split_buffer_size> <mapreduce_buffer_size>" << endl;
+        return 1;
+    }
+    string inputfile = argv[1]; // input/test.txt
+    int splitBufferSize = stoi(argv[2]);
+    int mapReduceBufferSize = stoi(argv[3]);
+
     // clean up all files in mapout, partition, sorted
     myutil::removeFiles("mapout");
     myutil::removeFiles("partition");
@@ -163,12 +172,12 @@ int main()
     // wait 2 seconds
     // std::this_thread::sleep_for(std::chrono::seconds(20));
 
-    RecordReader reader("input/test.txt", 50);
+    RecordReader reader(inputfile, splitBufferSize);
     reader.readSplits();
     vector<string> Splits = reader.getSplits();
 
     // map
-    WordCountMapper<MAPKEY_IN, MAPVALUE_IN, MAPKEY_OUT, MAPVALUE_OUT> wc(Splits);
+    WordCountMapper<MAPKEY_IN, MAPVALUE_IN, MAPKEY_OUT, MAPVALUE_OUT> wc(Splits, mapReduceBufferSize);
     int count = 0;
     for (const auto &split : Splits)
     {
@@ -185,22 +194,22 @@ int main()
     partitioner.write();
 
     // output all mapper files
-    while (count >= 0)
-    {
-        myutil::readBinaryPair<MAPKEY_OUT, MAPVALUE_OUT>("mapout/" + to_string(count--));
-    }
+    // while (count >= 0)
+    // {
+    //     myutil::readBinaryPair<MAPKEY_OUT, MAPVALUE_OUT>("mapout/" + to_string(count--));
+    // }
 
-    cout << "partition 입니다." << '\n';
-    myutil::readBinaryMap<MAPVALUE_OUT>("./partition");
+    // cout << "partition 입니다." << '\n';
+    // myutil::readBinaryMap<MAPVALUE_OUT>("./partition");
 
     // sort(external)
-    Sorter<REDUCEKEY_IN> sorter("./partition");
+    Sorter<REDUCEKEY_IN> sorter("./partition", mapReduceBufferSize);
     sorter.sort();
-    cout << "sorted 입니다." << '\n';
-    sorter.print();
+    // cout << "sorted 입니다." << '\n';
+    // sorter.print();
 
     // reduce
-    WordCountReducer<REDUCEKEY_IN, REDUCEVALUE_IN, REDUCEKEY_OUT, REDUCEVALUE_OUT> reducer(sorter.getKeys());
+    WordCountReducer<REDUCEKEY_IN, REDUCEVALUE_IN, REDUCEKEY_OUT, REDUCEVALUE_OUT> reducer(sorter.getKeys(), mapReduceBufferSize);
     // getkeylist
     vector<REDUCEKEY_IN> keylist = reducer.getKeylist();
     while (!keylist.empty())
