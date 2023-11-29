@@ -14,23 +14,27 @@ class Partitioner
 private:
     string inputPath = "mapout/";
     string outputPath = "partition/";
-    unordered_map<U, vector<W>> partitionMap;
+    // unordered_map<U, vector<W>> partitionMap;
 
 public:
     void run()
     {
         for (const auto &entry : fs::directory_iterator(inputPath)) // directory_iterator를 이용한 디렉토리 순회
         {
+            unordered_map<U, vector<W>> partitionMap;   // Move the unordered_map here
             ifstream inFile(entry.path(), ios::binary); // 각 파일을 순회하며 열기
 
             if (inFile.is_open())
             {
                 while (!inFile.eof())
                 {
-                    U key;
+                    char keyBuffer[2048]; // Replace KEY_SIZE with the actual size of the key
                     W value;
-                    inFile.read(reinterpret_cast<char *>(&key), sizeof(key));
+                    inFile.read(keyBuffer, sizeof(keyBuffer));
                     inFile.read(reinterpret_cast<char *>(&value), sizeof(value));
+
+                    // Convert the key to a string
+                    U key(keyBuffer, sizeof(keyBuffer));
 
                     // Check if key exists before inserting
                     auto it = partitionMap.find(key);
@@ -43,6 +47,7 @@ public:
                         partitionMap[key] = vector<W>{value};
                     }
                 }
+
                 inFile.close();
             }
 
@@ -60,7 +65,6 @@ public:
                     outFile.close();
                 }
             }
-            partitionMap.clear(); // partitionMap 초기화
         }
     }
 };

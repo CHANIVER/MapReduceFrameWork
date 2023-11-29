@@ -60,21 +60,21 @@ public:
 
         if (outFile.is_open())
         {
-            for (auto &pair : buffer)
+            for (const auto &pair : buffer)
             {
-                KeyType key = pair.first;
-                vector<ValueType> &values = pair.second;
+                const KeyType &key = pair.first;
+                const vector<ValueType> &values = pair.second;
 
                 for (auto &value : values)
                 {
-                    outFile.write(reinterpret_cast<char *>(&key), sizeof(key));
-                    outFile.write(reinterpret_cast<char *>(&value), sizeof(value));
+                    outFile.write(reinterpret_cast<const char *>(&key), sizeof(key));
+                    outFile.write(reinterpret_cast<const char *>(&value), sizeof(value));
                 }
             }
             outFile.close();
 
-            // 버퍼 비우기
-            buffer.clear();
+            // 버퍼를 새로운 unordered_map 객체로 교체
+            buffer = unordered_map<KeyType, vector<ValueType>>();
             totalPairCount = 0;
         }
         else

@@ -37,14 +37,21 @@ namespace myutil
     template <typename U, typename W>
     void readBinaryPair(const string &filename)
     {
+        const size_t MAX_KEY_LENGTH = 2048;
         ifstream inFile(filename, ios::binary);
-        U key;
-        W value;
         if (inFile.is_open())
         {
-            while (inFile.read(reinterpret_cast<char *>(&key), sizeof(key)))
+            while (!inFile.eof())
             {
+                // Read the key
+                char keyBuffer[MAX_KEY_LENGTH] = {0};
+                inFile.read(keyBuffer, MAX_KEY_LENGTH);
+                U key(keyBuffer);
+
+                // Read the value
+                W value;
                 inFile.read(reinterpret_cast<char *>(&value), sizeof(value));
+
                 cout << "Key: " << key << ", Value: " << value << endl;
             }
             inFile.close();
@@ -121,7 +128,7 @@ public:
 
     void map(const K &key, const V &value) override
     {
-        vector<string> words = myutil::split(value, "./ #^%$!@(_):?!,'");
+        vector<string> words = myutil::split(value, ",./#^%$!@(_):?!'-&|\" ");
 
         for (const auto &word : words)
         {
@@ -183,64 +190,62 @@ int main(int argc, char *argv[])
     int count = 0;
     for (const auto &split : Splits)
     {
-        auto wc = std::make_unique<WordCountMapper<MAPKEY_IN, MAPVALUE_IN, MAPKEY_OUT, MAPVALUE_OUT>>(mapReduceBufferSize);
+        auto wc = std::make_shared<WordCountMapper<MAPKEY_IN, MAPVALUE_IN, MAPKEY_OUT, MAPVALUE_OUT>>(mapReduceBufferSize);
         wc->setOutputPath("mapout/" + std::to_string(count));
-        threads.emplace_back([wc = std::move(wc), &split, count]
+        threads.emplace_back([wc, split, count]
                              {
         wc->map("", split);
         wc->flush(); });
         count++;
     }
+
     for (auto &thread : threads)
     {
         thread.join();
     }
     count--;
 
-    // partition
-    Partitioner<MAPKEY_OUT, MAPVALUE_OUT> partitioner;
-    partitioner.run();
-
     // output all mapper files
-    // while (count >= 0)
-    // {
-    //     myutil::readBinaryPair<MAPKEY_OUT, MAPVALUE_OUT>("mapout/" + to_string(count--));
-    // }
-
-    // cout << "partition 입니다." << '\n';
-    // myutil::readBinaryMap<MAPVALUE_OUT>("./partition");
-
-    // sort(external)
-    Sorter<REDUCEKEY_IN> sorter("./partition", mapReduceBufferSize);
-    sorter.sort();
-    // cout << "sorted 입니다." << '\n';
-    // sorter.print();
-
-    // reduce
-    WordCountReducer<REDUCEKEY_IN, REDUCEVALUE_IN, REDUCEKEY_OUT, REDUCEVALUE_OUT> reducer(sorter.getKeys(), mapReduceBufferSize);
-    // getkeylist
-    vector<REDUCEKEY_IN> keylist = reducer.getKeylist();
-    while (!keylist.empty())
+    while (count >= 0)
     {
-        REDUCEKEY_IN key = keylist.back();
-        cout << "key:" << key << '\n';
-        // open file that have same name with key
-        ifstream inFile("partition/" + key, ios::binary);
-        vector<REDUCEVALUE_IN> values;
-        while (!inFile.eof())
-        {
-            REDUCEVALUE_IN value;
-            inFile.read(reinterpret_cast<char *>(&value), sizeof(value));
-            values.push_back(value);
-        }
-        reducer.setOutputPath("reduceout/result");
-        reducer.reduce(key, values);
-        reducer.flush();
-        keylist.pop_back();
+        myutil::readBinaryPair<MAPKEY_OUT, MAPVALUE_OUT>("mapout/" + to_string(count--));
     }
 
-    // output reduceout file
-    myutil::readBinaryPair<REDUCEKEY_OUT, REDUCEVALUE_OUT>("reduceout/result");
+    // // partition
+    // Partitioner<MAPKEY_OUT, MAPVALUE_OUT> partitioner;
+    // partitioner.run();
+
+    // // cout << "partition 입니다." << '\n';
+    // // myutil::readBinaryMap<MAPVALUE_OUT>("./partition");
+
+    // // sort(external)
+    // Sorter<REDUCEKEY_IN> sorter("./partition", mapReduceBufferSize);
+    // sorter.sort();
+    // // cout << "sorted 입니다." << '\n';
+    // // sorter.print();
+
+    // // reduce
+    // WordCountReducer<REDUCEKEY_IN, REDUCEVALUE_IN, REDUCEKEY_OUT, REDUCEVALUE_OUT> reducer(sorter.getKeys(), mapReduceBufferSize);
+    // // getkeylist
+    // vector<REDUCEKEY_IN> keylist = reducer.getKeylist();
+    // for (const auto &key : keylist)
+    // {
+    //     cout << "key:" << key << '\n';
+    //     ifstream inFile("partition/" + key, ios::binary);
+    //     vector<REDUCEVALUE_IN> values;
+    //     REDUCEVALUE_IN value;
+    //     while (inFile.read(reinterpret_cast<char *>(&value), sizeof(value)))
+    //     {
+    //         values.push_back(value);
+    //     }
+
+    //     reducer.setOutputPath("reduceout/result");
+    //     reducer.reduce(key, values);
+    //     reducer.flush();
+    // }
+
+    // // output reduceout file
+    // myutil::readBinaryPair<REDUCEKEY_OUT, REDUCEVALUE_OUT>("reduceout/result");
 
     std::cout << "DatabaseSystem Team Project";
     auto end = std::chrono::system_clock::now();
