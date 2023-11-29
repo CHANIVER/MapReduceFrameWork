@@ -22,11 +22,10 @@ template <typename InKeyType, typename InValueType, typename OutKeyType, typenam
 class Mapper
 {
 protected:
-    vector<InValueType> splits;
     Pair<OutKeyType, OutValueType> pair;
 
 public:
-    Mapper(vector<InValueType> splits, int bufferSize) : splits(splits), pair(Pair<OutKeyType, OutValueType>(bufferSize)) {}
+    Mapper(int bufferSize) : pair(Pair<OutKeyType, OutValueType>(bufferSize)) {}
 
     /**
      * map 함수

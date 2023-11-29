@@ -117,7 +117,7 @@ template <typename K, typename V, typename U, typename W>
 class WordCountMapper : public Mapper<K, V, U, W>
 {
 public:
-    WordCountMapper(vector<V> splits, int blockSize) : Mapper<K, V, U, W>(splits, blockSize) {}
+    WordCountMapper(int blockSize) : Mapper<K, V, U, W>(blockSize) {}
 
     void map(const K &key, const V &value) override
     {
@@ -170,28 +170,36 @@ int main(int argc, char *argv[])
     myutil::removeFiles("reduceout");
 
     // wait 2 seconds
-    // std::this_thread::sleep_for(std::chrono::seconds(20));
+    std::this_thread::sleep_for(std::chrono::seconds(20));
+
+    // 실행시간 측정
+    auto start = std::chrono::system_clock::now();
 
     RecordReader reader(inputfile, splitBufferSize);
     reader.readSplits();
     vector<string> Splits = reader.getSplits();
 
-    // map
-    WordCountMapper<MAPKEY_IN, MAPVALUE_IN, MAPKEY_OUT, MAPVALUE_OUT> wc(Splits, mapReduceBufferSize);
+    std::vector<std::thread> threads;
     int count = 0;
     for (const auto &split : Splits)
     {
-        cout << count << '\n';
-        wc.setOutputPath("mapout/" + to_string(count++));
-        wc.map("", split);
-        wc.flush();
+        auto wc = std::make_unique<WordCountMapper<MAPKEY_IN, MAPVALUE_IN, MAPKEY_OUT, MAPVALUE_OUT>>(mapReduceBufferSize);
+        wc->setOutputPath("mapout/" + std::to_string(count));
+        threads.emplace_back([wc = std::move(wc), &split, count]
+                             {
+        wc->map("", split);
+        wc->flush(); });
+        count++;
+    }
+    for (auto &thread : threads)
+    {
+        thread.join();
     }
     count--;
 
     // partition
     Partitioner<MAPKEY_OUT, MAPVALUE_OUT> partitioner;
-    partitioner.read(count);
-    partitioner.write();
+    partitioner.run();
 
     // output all mapper files
     // while (count >= 0)
@@ -235,5 +243,9 @@ int main(int argc, char *argv[])
     myutil::readBinaryPair<REDUCEKEY_OUT, REDUCEVALUE_OUT>("reduceout/result");
 
     std::cout << "DatabaseSystem Team Project";
+    auto end = std::chrono::system_clock::now();
+    std::chrono::duration<double> elapsed_seconds = end - start;
+    std::cout << "elapsed time: " << elapsed_seconds.count() << "s\n";
+
     return 0;
 }

@@ -7,16 +7,18 @@
 #include <fstream>
 #include <thread>
 #include <map>
-
+#include <unordered_map>
 using namespace std;
 
 template <typename KeyType, typename ValueType>
 class Pair
 {
 private:
-    const int BUFFER_SIZE;                  // 버퍼 크기 설정
-    map<KeyType, vector<ValueType>> buffer; // non-static 멤버로 변경
-    int totalPairCount = 0;                 // non-static 멤버로 변경
+    const int BUFFER_SIZE; // 버퍼 크기 설정
+    // map<KeyType, vector<ValueType>> buffer; // non-static 멤버로 변경
+    unordered_map<KeyType, vector<ValueType>> buffer; // non-static 멤버로 변경
+
+    int totalPairCount = 0; // non-static 멤버로 변경
     string filename = "/tmp";
     KeyType key;
     ValueType value;
@@ -28,16 +30,24 @@ public:
 
     void write()
     {
-        // 버퍼에 추가
-        if (buffer.find(key) == buffer.end())
+        // Check if key exists before inserting
+        auto it = buffer.find(key);
+        if (it != buffer.end())
         {
-            buffer[key] = vector<ValueType>();
+            it->second.push_back(value);
         }
-        buffer[key].push_back(value);
+        else
+        {
+            buffer[key] = vector<ValueType>{value};
+        }
         totalPairCount++;
 
-        // 전체 키-값 쌍의 개수가 버퍼 크기를 초과하면 디스크에 쓰기
+        // If the total number of key-value pairs exceeds the buffer size, write to disk
         if (totalPairCount >= BUFFER_SIZE)
+        {
+            flush();
+        }
+        else if (buffer.size() >= BUFFER_SIZE)
         {
             flush();
         }
@@ -66,6 +76,10 @@ public:
             // 버퍼 비우기
             buffer.clear();
             totalPairCount = 0;
+        }
+        else
+        {
+            cout << "Failed to open file: " << filename << endl;
         }
     }
 
