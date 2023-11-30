@@ -40,14 +40,9 @@ public:
         {
             buffer[key] = vector<ValueType>{value};
         }
-        totalPairCount++;
 
         // If the total number of key-value pairs exceeds the buffer size, write to disk
-        if (totalPairCount >= BUFFER_SIZE)
-        {
-            flush();
-        }
-        else if (buffer.size() >= BUFFER_SIZE)
+        if (buffer.size() >= BUFFER_SIZE)
         {
             flush();
         }
@@ -67,7 +62,13 @@ public:
 
                 for (auto &value : values)
                 {
-                    outFile.write(reinterpret_cast<const char *>(&key), sizeof(key));
+                    // Write the key
+                    const char *keyData = key.c_str();
+                    size_t keySize = key.size();
+                    outFile.write(reinterpret_cast<const char *>(&keySize), sizeof(keySize));
+                    outFile.write(keyData, keySize);
+
+                    // Write the value
                     outFile.write(reinterpret_cast<const char *>(&value), sizeof(value));
                 }
             }

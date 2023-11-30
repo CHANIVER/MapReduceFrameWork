@@ -7,62 +7,64 @@
 
 using namespace std;
 namespace fs = std::filesystem; // namespace alias 설정
-
 template <typename U, typename W>
 class Partitioner
 {
 private:
     string inputPath = "mapout/";
     string outputPath = "partition/";
-    // unordered_map<U, vector<W>> partitionMap;
 
 public:
     void run()
     {
-        for (const auto &entry : fs::directory_iterator(inputPath)) // directory_iterator를 이용한 디렉토리 순회
+        for (const auto &entry : fs::directory_iterator(inputPath))
         {
-            unordered_map<U, vector<W>> partitionMap;   // Move the unordered_map here
-            ifstream inFile(entry.path(), ios::binary); // 각 파일을 순회하며 열기
+            unordered_map<U, vector<W>> partitionMap;
+
+            ifstream inFile(entry.path(), ios::binary);
 
             if (inFile.is_open())
             {
-                while (!inFile.eof())
+                size_t keySize;
+                char *keyBuffer;
+                W value;
+
+                while (inFile.read(reinterpret_cast<char *>(&keySize), sizeof(keySize)))
                 {
-                    char keyBuffer[2048]; // Replace KEY_SIZE with the actual size of the key
-                    W value;
-                    inFile.read(keyBuffer, sizeof(keyBuffer));
+                    keyBuffer = new char[keySize];
+                    inFile.read(keyBuffer, keySize);
+                    U key(keyBuffer, keySize);
+                    delete[] keyBuffer;
+
                     inFile.read(reinterpret_cast<char *>(&value), sizeof(value));
-
-                    // Convert the key to a string
-                    U key(keyBuffer, sizeof(keyBuffer));
-
-                    // Check if key exists before inserting
-                    auto it = partitionMap.find(key);
-                    if (it != partitionMap.end())
-                    {
-                        it->second.push_back(value);
-                    }
-                    else
-                    {
-                        partitionMap[key] = vector<W>{value};
-                    }
+                    partitionMap[key].push_back(value);
                 }
 
                 inFile.close();
             }
-
-            for (auto it = partitionMap.begin(); it != partitionMap.end(); ++it) // partitionMap의 모든 요소에 대해
+            // 추가한 디버깅 코드
+            std::cout << "Number of keys in partitionMap: " << partitionMap.size() << '\n';
+            for (const auto &pair : partitionMap)
             {
-                std::string filename = outputPath + it->first;
-                std::ofstream outFile(filename, std::ios::binary);
+                std::cout << "Key: " << pair.first << ", Value count: " << pair.second.size() << '\n';
+            }
+
+            for (const auto &pair : partitionMap)
+            {
+                string filename = outputPath + pair.first;
+                ofstream outFile(filename, ios::binary | ios::app);
 
                 if (outFile.is_open())
                 {
-                    for (auto val : it->second)
+                    for (const auto &val : pair.second)
                     {
-                        outFile.write(reinterpret_cast<char *>(&val), sizeof(val));
+                        outFile.write(reinterpret_cast<const char *>(&val), sizeof(val));
                     }
                     outFile.close();
+                }
+                else
+                {
+                    std::cerr << "Failed to open file: " << filename << '\n';
                 }
             }
         }

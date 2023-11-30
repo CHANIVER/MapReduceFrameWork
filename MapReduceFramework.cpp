@@ -37,16 +37,20 @@ namespace myutil
     template <typename U, typename W>
     void readBinaryPair(const string &filename)
     {
-        const size_t MAX_KEY_LENGTH = 2048;
         ifstream inFile(filename, ios::binary);
         if (inFile.is_open())
         {
             while (!inFile.eof())
             {
+                // Read the size of the key
+                size_t keySize;
+                inFile.read(reinterpret_cast<char *>(&keySize), sizeof(keySize));
+
                 // Read the key
-                char keyBuffer[MAX_KEY_LENGTH] = {0};
-                inFile.read(keyBuffer, MAX_KEY_LENGTH);
-                U key(keyBuffer);
+                char *keyBuffer = new char[keySize];
+                inFile.read(keyBuffer, keySize);
+                U key(keyBuffer, keySize);
+                delete[] keyBuffer;
 
                 // Read the value
                 W value;
@@ -128,7 +132,7 @@ public:
 
     void map(const K &key, const V &value) override
     {
-        vector<string> words = myutil::split(value, ",./#^%$!@(_):?!'-&|\" ");
+        vector<string> words = myutil::split(value, ",./#^%$!@(_):?!'`‘“-&|\" ");
 
         for (const auto &word : words)
         {
@@ -144,7 +148,7 @@ template <typename K, typename V, typename U, typename W>
 class WordCountReducer : public Reducer<K, V, U, W>
 {
 public:
-    WordCountReducer(vector<K> keylist, int blockSize) : Reducer<K, V, U, W>(keylist, blockSize) {}
+    WordCountReducer(int blockSize) : Reducer<K, V, U, W>(blockSize) {}
 
     void reduce(const K &key, const vector<V> &value) override
     {
@@ -177,7 +181,7 @@ int main(int argc, char *argv[])
     myutil::removeFiles("reduceout");
 
     // wait 2 seconds
-    std::this_thread::sleep_for(std::chrono::seconds(20));
+    // std::this_thread::sleep_for(std::chrono::seconds(20));
 
     // 실행시간 측정
     auto start = std::chrono::system_clock::now();
@@ -205,52 +209,148 @@ int main(int argc, char *argv[])
     }
     count--;
 
+    // map 수행시간 출력
+    std::cout << "map 수행시간: " << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - start).count() << "ms\n";
+
     // output all mapper files
-    while (count >= 0)
+    // while (count >= 0)
+    // {
+    //     myutil::readBinaryPair<MAPKEY_OUT, MAPVALUE_OUT>("mapout/" + to_string(count--));
+    // }
+
+    // map 파일들을 txt로 출력
+    cout << "map 파일들을 txt로 출력하시겠습니까? (y/n)" << endl;
+    char answer;
+    cin >> answer;
+    if (answer == 'y')
     {
-        myutil::readBinaryPair<MAPKEY_OUT, MAPVALUE_OUT>("mapout/" + to_string(count--));
+        for (int i = 0; i < Splits.size(); i++)
+        {
+            // mapout/0 파일을 읽어서 mapout/0.txt로 출력
+            ifstream inFile("mapout/" + to_string(i), ios::binary);
+            ofstream outFile("mapout" + to_string(i) + ".txt");
+            if (inFile.is_open() && outFile.is_open())
+            {
+                while (!inFile.eof())
+                {
+                    // Read the size of the key
+                    size_t keySize;
+                    inFile.read(reinterpret_cast<char *>(&keySize), sizeof(keySize));
+
+                    // Read the key
+                    char *keyBuffer = new char[keySize];
+                    inFile.read(keyBuffer, keySize);
+                    MAPKEY_OUT key(keyBuffer, keySize);
+                    delete[] keyBuffer;
+
+                    // Read the value
+                    MAPVALUE_OUT value;
+                    inFile.read(reinterpret_cast<char *>(&value), sizeof(value));
+                    outFile << "Key: " << key << ", Value: " << value << endl;
+                }
+                inFile.close();
+                outFile.close();
+            }
+            else
+            {
+                cout << "Failed to open file: "
+                     << "mapout/" + to_string(i) << endl;
+            }
+        }
     }
 
-    // // partition
-    // Partitioner<MAPKEY_OUT, MAPVALUE_OUT> partitioner;
-    // partitioner.run();
+    // partition 수행시간 측정
+    start = std::chrono::system_clock::now();
+    // partition
+    Partitioner<MAPKEY_OUT, MAPVALUE_OUT> partitioner;
+    partitioner.run();
+    // partition 수행시간 출력
+    std::cout << "partition 수행시간: " << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - start).count() << "ms\n";
 
-    // // cout << "partition 입니다." << '\n';
-    // // myutil::readBinaryMap<MAPVALUE_OUT>("./partition");
+    // cout << "partition 입니다." << '\n';
+    // myutil::readBinaryMap<MAPVALUE_OUT>("./partition");
 
-    // // sort(external)
-    // Sorter<REDUCEKEY_IN> sorter("./partition", mapReduceBufferSize);
-    // sorter.sort();
-    // // cout << "sorted 입니다." << '\n';
-    // // sorter.print();
+    // sort 수행시간 측정
+    start = std::chrono::system_clock::now();
+    // sort(external)
+    Sorter sorter("./partition", mapReduceBufferSize);
+    sorter.sort();
+    // cout << "sorted 입니다." << '\n';
+    // sorter.print();
+    // sort 수행시간 출력
+    std::cout << "sort 수행시간: " << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - start).count() << "ms\n";
 
-    // // reduce
-    // WordCountReducer<REDUCEKEY_IN, REDUCEVALUE_IN, REDUCEKEY_OUT, REDUCEVALUE_OUT> reducer(sorter.getKeys(), mapReduceBufferSize);
-    // // getkeylist
-    // vector<REDUCEKEY_IN> keylist = reducer.getKeylist();
-    // for (const auto &key : keylist)
-    // {
-    //     cout << "key:" << key << '\n';
-    //     ifstream inFile("partition/" + key, ios::binary);
-    //     vector<REDUCEVALUE_IN> values;
-    //     REDUCEVALUE_IN value;
-    //     while (inFile.read(reinterpret_cast<char *>(&value), sizeof(value)))
-    //     {
-    //         values.push_back(value);
-    //     }
+    // reduce
+    // reduce 수행시간 측정
+    start = std::chrono::system_clock::now();
+    std::ifstream keysFile("./partition/sorted_keys.txt");
+    std::string key;
+    std::vector<std::thread> reduceThreads;
+    while (std::getline(keysFile, key))
+    {
+        reduceThreads.emplace_back([&, key]()
+                                   {
+        WordCountReducer<REDUCEKEY_IN, REDUCEVALUE_IN, REDUCEKEY_OUT, REDUCEVALUE_OUT> reducer(mapReduceBufferSize);
+        reducer.setOutputPath("reduceout/result");
+        std::ifstream inFile("./partition/" + key, std::ios::binary);
+        std::vector<REDUCEVALUE_IN> values;
+        REDUCEVALUE_IN value;
+        while (inFile.read(reinterpret_cast<char*>(&value), sizeof(value))) {
+            values.push_back(value);
+        }
+        reducer.reduce(key, values); });
+    }
 
-    //     reducer.setOutputPath("reduceout/result");
-    //     reducer.reduce(key, values);
-    //     reducer.flush();
-    // }
+    for (auto &thread : reduceThreads)
+    {
+        thread.join();
+    }
+    // reduce 수행시간 출력
+    std::cout << "reduce 수행시간: " << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - start).count() << "ms\n";
 
     // // output reduceout file
     // myutil::readBinaryPair<REDUCEKEY_OUT, REDUCEVALUE_OUT>("reduceout/result");
 
+    // 결과 파일을 txt로 출력하시겠습니까?
+    cout << "결과 파일을 txt로 출력하시겠습니까? (y/n)" << endl;
+    char answer2;
+    cin >> answer2;
+    if (answer2 == 'y')
+    {
+        // reduceout/result 파일을 읽어서 reduceout/result.txt로 출력
+        ifstream inFile("reduceout/result", ios::binary);
+        ofstream outFile("result.txt");
+        if (inFile.is_open() && outFile.is_open())
+        {
+            while (!inFile.eof())
+            {
+                // Read the size of the key
+                size_t keySize;
+                inFile.read(reinterpret_cast<char *>(&keySize), sizeof(keySize));
+
+                // Read the key
+                char *keyBuffer = new char[keySize];
+                inFile.read(keyBuffer, keySize);
+                REDUCEKEY_OUT key(keyBuffer, keySize);
+                delete[] keyBuffer;
+
+                // Read the value
+                REDUCEVALUE_OUT value;
+                inFile.read(reinterpret_cast<char *>(&value), sizeof(value));
+
+                outFile << "Key: " << key << ", Value: " << value << endl;
+            }
+            inFile.close();
+            outFile.close();
+        }
+        else
+        {
+            cout << "Failed to open file: "
+                 << "reduceout/result" << endl;
+        }
+    }
+
     std::cout << "DatabaseSystem Team Project";
-    auto end = std::chrono::system_clock::now();
-    std::chrono::duration<double> elapsed_seconds = end - start;
-    std::cout << "elapsed time: " << elapsed_seconds.count() << "s\n";
 
     return 0;
 }

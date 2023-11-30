@@ -24,11 +24,10 @@ class Reducer
 {
 
 protected:
-    vector<InKeyType> keylist;
     Pair<OutKeyType, OutValueType> pair;
 
 public:
-    Reducer(vector<InKeyType> keylist, int bufferSize) : keylist(keylist), pair(Pair<OutKeyType, OutValueType>(bufferSize)) {}
+    Reducer(int bufferSize) : pair(Pair<OutKeyType, OutValueType>(bufferSize)) {}
 
     /**
      * reduce 함수
@@ -42,7 +41,6 @@ public:
     virtual void reduce(const InKeyType &key, const vector<InValueType> &value) = 0;
     void flush() { this->pair.flush(); }
     void setOutputPath(string outfilename) { this->pair.setOutputPath(outfilename); }
-    vector<InKeyType> getKeylist() { return this->keylist; }
 };
 
 /*

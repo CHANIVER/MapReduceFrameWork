@@ -1,156 +1,85 @@
-#include <queue>
-#include <vector>
-#include <fstream>
-#include <iostream>
-#include <algorithm>
-#include <iterator>
-#include <set>
 #include <filesystem>
+#include <fstream>
+#include <queue>
+#include <set>
+#include <vector>
 
 using namespace std;
 namespace fs = std::filesystem;
 
-template <typename K>
 class Sorter
 {
 private:
-    const int BLOCK_SIZE;       // Block size 설정
-    multiset<K> buffer;         // 버퍼 (키를 저장)
-    string dirPath;             // Partition 디렉토리 경로
-    vector<string> sortedFiles; // 정렬된 파일들의 이름을 저장할 vector
+    const size_t BLOCK_SIZE;
+    multiset<string> buffer;
+    vector<string> tempFiles;
+    const string dirPath;
 
-public:
-    Sorter(const string &dirPath, int blockSize) : dirPath(dirPath), BLOCK_SIZE(blockSize) {}
-
-    void sort()
-    {
-        for (const auto &entry : fs::directory_iterator(dirPath))
-        {
-            // 파일의 이름을 키로 사용
-            K key = entry.path().filename().string();
-
-            buffer.insert(key);
-
-            // 버퍼의 크기가 block size를 넘으면 flush
-            if (buffer.size() >= BLOCK_SIZE)
-            {
-                flush();
-            }
-        }
-
-        // 처리되지 않은 마지막 블록을 저장
-        if (!buffer.empty())
-        {
-            flush();
-        }
-
-        // 병합 과정 수행
-        merge();
-    }
-
-    // merged.bin 파일을 읽어 키를 출력하는 함수
-    void print()
-    {
-        ifstream inFile(dirPath + "/merged_result", ios::binary);
-
-        if (inFile.is_open())
-        {
-            K key;
-            while (inFile.read(reinterpret_cast<char *>(&key), sizeof(K)))
-            {
-                cout << key << endl;
-            }
-            inFile.close();
-        }
-        else
-        {
-            cout << "Failed to open file: " << dirPath + "/merged_result" << endl;
-        }
-    }
-
-    // merged_result 파일을 읽어 키를 반환하는 함수
-    vector<K> getKeys()
-    {
-        ifstream inFile(dirPath + "/merged_result", ios::binary);
-        vector<K> keys;
-
-        if (inFile.is_open())
-        {
-            K key;
-            while (inFile.read(reinterpret_cast<char *>(&key), sizeof(K)))
-            {
-                keys.push_back(key);
-            }
-            inFile.close();
-
-            // Sort the keys in reverse order
-            std::sort(keys.rbegin(), keys.rend());
-        }
-        else
-        {
-            cout << "Failed to open file: " << dirPath + "/merged_result" << endl;
-        }
-
-        return keys;
-    }
-
-private:
     void flush()
     {
-        string filename = dirPath + "/sorted_" + to_string(sortedFiles.size());
-        sortedFiles.push_back(filename);
+        if (buffer.empty())
+            return;
 
-        ofstream outFile(filename, ios::binary);
+        string tempFile = dirPath + "/temp_" + to_string(tempFiles.size());
+        tempFiles.push_back(tempFile);
 
+        ofstream outFile(tempFile);
         for (const auto &key : buffer)
-        {
-            outFile.write(reinterpret_cast<const char *>(&key), sizeof(K));
-        }
-
+            outFile << key << '\n';
         outFile.close();
+
         buffer.clear();
     }
 
     void merge()
     {
-        using P = pair<K, ifstream *>;
-
-        auto comp = [](const P &a, const P &b)
+        auto comp = [](const pair<string, ifstream *> &a, const pair<string, ifstream *> &b)
         {
             return a.first > b.first;
         };
 
-        priority_queue<P, vector<P>, decltype(comp)> minHeap(comp);
-        vector<ifstream> inFiles(sortedFiles.size());
+        priority_queue<pair<string, ifstream *>, vector<pair<string, ifstream *>>, decltype(comp)> minHeap(comp);
+        vector<ifstream> inFiles(tempFiles.size());
 
-        // 각 파일을 열고, 첫 번째 키를 minHeap에 추가
-        for (size_t i = 0; i < sortedFiles.size(); ++i)
+        for (size_t i = 0; i < tempFiles.size(); ++i)
         {
-            inFiles[i].open(sortedFiles[i], ios::binary);
-            K key;
-            if (inFiles[i].read(reinterpret_cast<char *>(&key), sizeof(K)))
-            {
-                minHeap.push(make_pair(key, &inFiles[i]));
-            }
+            inFiles[i].open(tempFiles[i]);
+            string key;
+            if (getline(inFiles[i], key))
+                minHeap.push({key, &inFiles[i]});
         }
 
-        ofstream outFile(dirPath + "/merged_result", ios::binary);
+        ofstream outFile(dirPath + "/sorted_keys.txt");
 
         while (!minHeap.empty())
         {
-            // 가장 작은 키를 가진 파일을 찾아 그 키를 outFile에 쓴다.
             auto [key, inFile] = minHeap.top();
             minHeap.pop();
 
-            outFile.write(reinterpret_cast<const char *>(&key), sizeof(K));
+            outFile << key << '\n';
 
-            // 해당 파일에서 다음 키를 읽어 minHeap에 추가한다.
-            if (inFile->read(reinterpret_cast<char *>(&key), sizeof(K)))
-            {
-                minHeap.push(make_pair(key, inFile));
-            }
+            if (getline(*inFile, key))
+                minHeap.push({key, inFile});
         }
 
         outFile.close();
+    }
+
+public:
+    Sorter(const string &dirPath, size_t blockSize) : dirPath(dirPath), BLOCK_SIZE(blockSize) {}
+
+    void sort()
+    {
+        for (const auto &entry : fs::directory_iterator(dirPath))
+        {
+            string key = entry.path().filename().string();
+            buffer.insert(key);
+
+            if (buffer.size() >= BLOCK_SIZE)
+                flush();
+        }
+
+        flush();
+        merge();
     }
 };
