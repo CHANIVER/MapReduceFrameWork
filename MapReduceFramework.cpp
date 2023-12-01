@@ -48,7 +48,7 @@
  * 프로젝트 시작 일시: 2023.11.08
  * 버전: 1.0.0
  * 버전 날짜: 2023.12.01
- * 저자: Kwon Yechan
+ * 저자: Kwon Yechan, Park Solji, Yun Hongmin
  *
  * 프로젝트 설명:
  *  - 이 프로젝트는 MapReduce 알고리즘을 C++로 구현한 프레임워크입니다.
