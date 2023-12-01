@@ -12,23 +12,25 @@
 using namespace std;
 
 /**
- * Mapper 클래스
- * Mapper 클래스는 map 함수를 가지고 있으며, map 함수를 통해 key, value를 받아서 Pair에 저장하고 write
+ * Reducer 클래스
+ * Reducer 클래스는 reduce 함수를 가지고 있으며, reduce 함수를 통해 key, value를 받아서 Pair에 저장하고 write
  * input 형식 -> InKeyType, InValueType
  * output 형식 -> OutKeyType, OutValueType
  * 생성자 인자 splits
  */
+
 template <typename InKeyType, typename InValueType, typename OutKeyType, typename OutValueType>
-class Mapper
+class Reducer
 {
+
 protected:
     Pair<OutKeyType, OutValueType> pair;
 
 public:
-    Mapper(int bufferSize) : pair(Pair<OutKeyType, OutValueType>(bufferSize)) {}
+    Reducer(int bufferSize) : pair(Pair<OutKeyType, OutValueType>(bufferSize)) {}
 
     /**
-     * map 함수
+     * reduce 함수
      * key, value를 받아서 Pair에 저장하고 write
      * Pair에 저장된 값들은 버퍼에 저장되고 버퍼가 가득 차면 flush
      * @param key key 값
@@ -36,7 +38,7 @@ public:
      * @return void
      * @see Pair
      */
-    virtual void map(const InKeyType &key, const InValueType &value) = 0;
+    virtual void reduce(const InKeyType &key, const vector<InValueType> &value) = 0;
     void flush() { this->pair.flush(); }
     void setOutputPath(string outfilename) { this->pair.setOutputPath(outfilename); }
 };
