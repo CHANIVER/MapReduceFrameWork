@@ -1,85 +1,89 @@
-#include <filesystem>
-#include <fstream>
-#include <queue>
-#include <set>
+#include <iostream>
+#include <algorithm>
 #include <vector>
+#include <queue>
+#include <fstream>
+#include <string>
 
-using namespace std;
-namespace fs = std::filesystem;
-
+template <typename K>
 class Sorter
 {
-private:
-    const size_t BLOCK_SIZE;
-    multiset<string> buffer;
-    vector<string> tempFiles;
-    const string dirPath;
+public:
+    int blockSize;
 
-    void flush()
+    Sorter(int blockSize) : blockSize(blockSize) {}
+
+    void externalSort(std::vector<K> &input, std::string outputFileName)
     {
-        if (buffer.empty())
-            return;
-
-        string tempFile = dirPath + "/temp_" + to_string(tempFiles.size());
-        tempFiles.push_back(tempFile);
-
-        ofstream outFile(tempFile);
-        for (const auto &key : buffer)
-            outFile << key << '\n';
-        outFile.close();
-
-        buffer.clear();
+        int numFiles = divideIntoSortedFiles(input);
+        mergeFiles(numFiles, outputFileName);
     }
 
-    void merge()
+private:
+    struct QueueNode
     {
-        auto comp = [](const pair<string, ifstream *> &a, const pair<string, ifstream *> &b)
-        {
-            return a.first > b.first;
-        };
+        K value;
+        int fileIndex;
 
-        priority_queue<pair<string, ifstream *>, vector<pair<string, ifstream *>>, decltype(comp)> minHeap(comp);
-        vector<ifstream> inFiles(tempFiles.size());
+        QueueNode(K v, int index) : value(v), fileIndex(index) {}
 
-        for (size_t i = 0; i < tempFiles.size(); ++i)
+        bool operator>(const QueueNode &node) const
         {
-            inFiles[i].open(tempFiles[i]);
-            string key;
-            if (getline(inFiles[i], key))
-                minHeap.push({key, &inFiles[i]});
+            return value > node.value;
+        }
+    };
+
+    int divideIntoSortedFiles(std::vector<K> &input)
+    {
+        int fileCount = 0;
+        for (int i = 0; i < input.size(); i += blockSize)
+        {
+            std::vector<K> block(input.begin() + i, input.begin() + std::min(i + blockSize, (int)input.size()));
+            std::sort(block.begin(), block.end());
+            std::ofstream out(std::to_string(fileCount));
+            for (const K &value : block)
+            {
+                out << value << std::endl;
+            }
+            fileCount++;
+        }
+        return fileCount;
+    }
+
+    void mergeFiles(int numFiles, std::string outputFileName)
+    {
+        std::vector<std::ifstream> inputStreams(numFiles);
+        for (int i = 0; i < numFiles; i++)
+        {
+            inputStreams[i].open(std::to_string(i));
         }
 
-        ofstream outFile(dirPath + "/sorted_keys.txt");
+        std::priority_queue<QueueNode, std::vector<QueueNode>, std::greater<>> minHeap;
+        for (int i = 0; i < numFiles; i++)
+        {
+            K value;
+            if (inputStreams[i] >> value)
+            {
+                minHeap.push(QueueNode(value, i));
+            }
+        }
 
+        std::ofstream out(outputFileName);
         while (!minHeap.empty())
         {
-            auto [key, inFile] = minHeap.top();
+            QueueNode node = minHeap.top();
             minHeap.pop();
-
-            outFile << key << '\n';
-
-            if (getline(*inFile, key))
-                minHeap.push({key, inFile});
+            out << node.value << std::endl;
+            if (inputStreams[node.fileIndex] >> node.value)
+            {
+                minHeap.push(node);
+            }
         }
 
-        outFile.close();
-    }
-
-public:
-    Sorter(const string &dirPath, size_t blockSize) : dirPath(dirPath), BLOCK_SIZE(blockSize) {}
-
-    void sort()
-    {
-        for (const auto &entry : fs::directory_iterator(dirPath))
+        for (int i = 0; i < numFiles; i++)
         {
-            string key = entry.path().filename().string();
-            buffer.insert(key);
-
-            if (buffer.size() >= BLOCK_SIZE)
-                flush();
+            inputStreams[i].close();
+            remove(std::to_string(i).c_str());
         }
-
-        flush();
-        merge();
     }
 };

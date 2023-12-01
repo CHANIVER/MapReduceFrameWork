@@ -1,72 +1,81 @@
 #include <fstream>
-#include <map>
-#include <vector>
-#include <string>
 #include <unordered_map>
-#include <filesystem> // 디렉토리 순회를 위한 헤더
+#include <list>
+#include <filesystem>
+#include <vector>
+#include <queue>
+#include <algorithm>
+#include <iostream>
 
-using namespace std;
-namespace fs = std::filesystem; // namespace alias 설정
-template <typename U, typename W>
+template <typename K, typename V>
 class Partitioner
 {
 private:
-    string inputPath = "mapout/";
-    string outputPath = "partition/";
+    std::unordered_map<K, std::string> indexList;
+    size_t indexCount = 0;
+
+    void appendValuesToFile(const std::string &filename, const std::vector<V> &values)
+    {
+        std::ofstream file("partition/" + filename, std::ios::binary | std::ios::app);
+        for (const auto &value : values)
+        {
+            file.write(reinterpret_cast<const char *>(&value), sizeof(V));
+        }
+    }
 
 public:
-    void run()
+    // get all keys as a vector
+    vector<K> getKeys()
     {
-        for (const auto &entry : fs::directory_iterator(inputPath))
+        vector<K> keys;
+        for (const auto &[key, value] : indexList)
         {
-            unordered_map<U, vector<W>> partitionMap;
+            keys.push_back(key);
+        }
+        return keys;
+    }
 
-            ifstream inFile(entry.path(), ios::binary);
+    string getFilePath(const K &key)
+    {
+        return "partition/" + indexList[key];
+    }
 
-            if (inFile.is_open())
+    void processDirectory(const std::string &mapoutDir)
+    {
+        for (const auto &entry : std::filesystem::directory_iterator(mapoutDir))
+        {
+            std::string filePath = entry.path().string();
+            std::ifstream mapFile(filePath, std::ios::binary);
+
+            std::unordered_map<K, std::vector<V>> KVmap;
+
+            // Read the size of the key
+            size_t keySize;
+
+            while (mapFile.read(reinterpret_cast<char *>(&keySize), sizeof(keySize)))
             {
-                size_t keySize;
-                char *keyBuffer;
-                W value;
-
-                while (inFile.read(reinterpret_cast<char *>(&keySize), sizeof(keySize)))
-                {
-                    keyBuffer = new char[keySize];
-                    inFile.read(keyBuffer, keySize);
-                    U key(keyBuffer, keySize);
-                    delete[] keyBuffer;
-
-                    inFile.read(reinterpret_cast<char *>(&value), sizeof(value));
-                    partitionMap[key].push_back(value);
-                }
-
-                inFile.close();
+                // Read the key
+                char *keyBuffer = new char[keySize];
+                mapFile.read(keyBuffer, keySize);
+                K key(keyBuffer, keySize);
+                V value;
+                delete[] keyBuffer;
+                mapFile.read(reinterpret_cast<char *>(&value), sizeof(V));
+                KVmap[key].push_back(value);
+                // cout << key << '\n';
             }
-            // 추가한 디버깅 코드
-            std::cout << "Number of keys in partitionMap: " << partitionMap.size() << '\n';
-            for (const auto &pair : partitionMap)
-            {
-                std::cout << "Key: " << pair.first << ", Value count: " << pair.second.size() << '\n';
-            }
 
-            for (const auto &pair : partitionMap)
+            for (const auto &[key, values] : KVmap)
             {
-                string filename = outputPath + pair.first;
-                ofstream outFile(filename, ios::binary | ios::app);
-
-                if (outFile.is_open())
+                // cout << indexCount << '\n';
+                // cout << key << '\n';
+                if (indexList.find(key) == indexList.end())
                 {
-                    for (const auto &val : pair.second)
-                    {
-                        outFile.write(reinterpret_cast<const char *>(&val), sizeof(val));
-                    }
-                    outFile.close();
+                    indexList[key] = std::to_string(indexCount++);
                 }
-                else
-                {
-                    std::cerr << "Failed to open file: " << filename << '\n';
-                }
+                appendValuesToFile(indexList[key], values);
             }
         }
     }
+    // 다른 필요한 메서드들...
 };
