@@ -410,7 +410,7 @@ namespace myutil
     // mapout 파일들을 txt로 출력하시겠습니까?
     void printMapoutFiles(int count)
     {
-        cout << "map 파일들을 txt로 출력하시겠습니까? (y/n)" << endl;
+        cout << "map 파일들을 txt로 출력하시겠습니까? (y/n)\n 주의! 시간이 오래 걸릴 수 있습니다.\n";
         char answer;
         cin >> answer;
         if (answer == 'y')
@@ -454,7 +454,7 @@ namespace myutil
     // partition 파일들을 txt로 출력하시겠습니까?
     void printPartitionFiles()
     {
-        cout << "결과 파일을 txt로 출력하시겠습니까? (y/n)" << endl;
+        cout << "결과 파일을 txt로 출력하시겠습니까? (y/n)" << '\n';
         char answer2;
         cin >> answer2;
         if (answer2 == 'y')
