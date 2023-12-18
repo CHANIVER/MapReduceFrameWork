@@ -16,10 +16,10 @@ private:
 
     void appendValuesToFile(const std::string &filename, const std::vector<V> &values)
     {
-        std::ofstream file("partition/" + filename, std::ios::binary | std::ios::app);
+        std::ofstream file("partition/" + filename, std::ios::app);
         for (const auto &value : values)
         {
-            file.write(reinterpret_cast<const char *>(&value), sizeof(V));
+            file << value << " ";
         }
     }
 
@@ -45,30 +45,21 @@ public:
         for (const auto &entry : std::filesystem::directory_iterator(mapoutDir))
         {
             std::string filePath = entry.path().string();
-            std::ifstream mapFile(filePath, std::ios::binary);
+            std::ifstream mapFile(filePath);
 
             std::unordered_map<K, std::vector<V>> KVmap;
 
-            // Read the size of the key
-            size_t keySize;
+            // Read the key-value pairs
+            K key;
+            V value;
 
-            while (mapFile.read(reinterpret_cast<char *>(&keySize), sizeof(keySize)))
+            while (mapFile >> key >> value)
             {
-                // Read the key
-                char *keyBuffer = new char[keySize];
-                mapFile.read(keyBuffer, keySize);
-                K key(keyBuffer, keySize);
-                V value;
-                delete[] keyBuffer;
-                mapFile.read(reinterpret_cast<char *>(&value), sizeof(V));
                 KVmap[key].push_back(value);
-                // cout << key << '\n';
             }
 
             for (const auto &[key, values] : KVmap)
             {
-                // cout << indexCount << '\n';
-                // cout << key << '\n';
                 if (indexList.find(key) == indexList.end())
                 {
                     indexList[key] = std::to_string(indexCount++);
@@ -77,5 +68,4 @@ public:
             }
         }
     }
-    // 다른 필요한 메서드들...
 };

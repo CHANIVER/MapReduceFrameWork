@@ -202,7 +202,7 @@ int main(int argc, char *argv[])
     myutil::removeFiles("reduceout");
 
     // wait 2 seconds
-    // std::this_thread::sleep_for(std::chrono::seconds(20));
+    std::this_thread::sleep_for(std::chrono::seconds(20));
 
     // 전체 실행시간 측정
     auto start = std::chrono::system_clock::now();
@@ -261,7 +261,7 @@ int main(int argc, char *argv[])
         WordCountReducer<REDUCEKEY_IN, REDUCEVALUE_IN, REDUCEKEY_OUT, REDUCEVALUE_OUT> reducer(mapReduceBufferSize);
         reducer.setOutputPath("reduceout/result");
         string thisFilename= partitioner.getFilePath(key);
-        std::ifstream inFile(thisFilename, std::ios::binary);
+        std::ifstream inFile(thisFilename); // 변경: 이진 파일 모드 제거
         //check if file is open
         if (!inFile.is_open())
         {
@@ -270,7 +270,7 @@ int main(int argc, char *argv[])
         }
         std::vector<REDUCEVALUE_IN> values;
         REDUCEVALUE_IN value;
-        while (inFile.read(reinterpret_cast<char*>(&value), sizeof(value))) {
+        while (inFile >> value) { // 변경: 텍스트 파일에서 읽기
             values.push_back(value);
         }
         reducer.reduce(key, values); });

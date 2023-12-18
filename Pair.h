@@ -62,21 +62,17 @@ public:
 
                 for (auto &value : values)
                 {
-                    // Write the key
-                    const char *keyData = key.c_str();
-                    size_t keySize = key.size();
-                    outFile.write(reinterpret_cast<const char *>(&keySize), sizeof(keySize));
-                    outFile.write(keyData, keySize);
-
-                    // Write the value
-                    outFile.write(reinterpret_cast<const char *>(&value), sizeof(value));
+                    // Write the key and value to the file, separated by a space
+                    outFile << key << " " << value << " ";
                 }
+
+                // Add a newline to separate key-value pairs
+                outFile << endl;
             }
             outFile.close();
 
             // 버퍼를 새로운 unordered_map 객체로 교체
             buffer = unordered_map<KeyType, vector<ValueType>>();
-            totalPairCount = 0;
         }
         else
         {
